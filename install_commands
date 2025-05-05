@@ -1,0 +1,8 @@
+export CC=arm-linux-gnueabihf-gcc
+export AR=arm-linux-gnueabihf-ar
+export RANLIB=arm-linux-gnueabihf-ranlib
+export LD=arm-linux-gnueabihf-ld
+export NM=arm-linux-gnueabihf-nm
+
+./Configure linux-armv4 no-asm shared --prefix=/tmp/openssl-arm
+make -j$(nproc)

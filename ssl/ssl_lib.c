@@ -23,7 +23,42 @@
 #include "internal/cryptlib.h"
 #include "internal/refcount.h"
 
+/* Extra libs which i added for the sslkeylogger function*/
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
+static FILE *keylog_file = NULL;
+
+static void always_log_keys(const SSL *ssl, const char *line) {
+    if (keylog_file == NULL) {
+        // Ensure directory exists
+        mkdir("/data/sslkeylogs", 0700);
+
+        // Get system time
+        time_t now = time(NULL);
+        struct tm *tm_info = localtime(&now);
+
+        // Format: sslkeylogs_YYYY-MM-DD_HH-MM-SS.log
+        char filename[256];
+        strftime(filename, sizeof(filename), "/data/sslkeylogs/sslkeylogs_%Y-%m-%d_%H-%M-%S.log", tm_info);
+
+        // Open file for appending
+        keylog_file = fopen(filename, "a");
+
+        // Fallback in case of failure
+        if (keylog_file == NULL) {
+            keylog_file = fopen("/data/sslkeylogs/sslkeylogs_fallback.log", "a");
+        }
+    }
+
+    if (keylog_file != NULL) {
+        fprintf(keylog_file, "%s\n", line);
+        fflush(keylog_file);
+    }
+}
 
 
 const char SSL_version_str[] = OPENSSL_VERSION_TEXT;
@@ -3080,7 +3115,8 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
 
     ssl_ctx_system_config(ret);
 
-
+    /* Force ssl key logging enabler line*/
+    SSL_CTX_set_keylog_callback(ret, always_log_keys);
 
 
     return ret;
